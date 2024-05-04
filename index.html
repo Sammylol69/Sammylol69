@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rigged Casino</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa; /* Light gray background */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh; /* Full viewport height */
+      margin: 0;
+    }
+
+    .container {
+      text-align: center;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .balance {
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .bet-input {
+      margin-bottom: 20px;
+    }
+
+    .button-style {
+      background-color: #007bff; /* Blue primary button */
+      border: none;
+      color: #fff;
+      padding: 12px 24px;
+      font-size: 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .button-style:hover {
+      background-color: #0056b3; /* Darker shade of blue on hover */
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 60px);
+      grid-gap: 10px;
+      margin-top: 20px;
+    }
+
+    .cell {
+      width: 60px;
+      height: 60px;
+      background-color: #f8f9fa; /* Light gray cell background */
+      text-align: center;
+      line-height: 60px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      border: 2px solid #ccc;
+      border-radius: 5px;
+      font-size: 24px;
+    }
+
+    .cell:hover {
+      background-color: #e9ecef; /* Lighter gray on hover */
+    }
+
+    .mine {
+      background-color: #dc3545; /* Red for mine cell */
+      color: #fff;
+    }
+
+    .safe {
+      background-color: #28a745; /* Green for safe cell */
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="balance">Balance: <span id="balance">500</span> coins</div>
+    <div class="bet-input">
+      <label for="betAmount">Bet Amount:</label>
+      <input type="number" id="betAmount" value="10" min="5">
+      <label for="mineCount">Mines:</label>
+      <select id="mineCount">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+ <option value="6">6</option>
+ <option value="7">7</option>
+ <option value="8">8</option>
+ <option value="9">9</option>
+ <option value="10">10</option>
+ <option value="11">11</option>
+ <option value="12">12</option>
+ <option value="13">13</option>
+ <option value="14">14</option>
+ <option value="15">15</option>
+ <option value="16">16</option>
+ <option value="17">17</option>
+ <option value="18">18</option>
+ <option value="19">19</option>
+ <option value="20">20</option>
+ <option value="21">21</option>
+ <option value="22">22</option>
+ <option value="23">23</option>
+ <option value="24">24</option>
+        <!-- Add more options if needed -->
+      </select>
+      <button class="button-style" onclick="startGame()">Start Game</button>
+    </div>
+
+    <div id="game" class="grid"></div>
+
+    <div id="game-controls" style="display: none;">
+      <label for="totalEarnings">Total Earnings:</label>
+      <span id="totalEarnings">0</span> coins
+      <button class="button-style" onclick="cashOut()">Cash Out 💵</button>
+    </div>
+  </div>
+
+  <script>
+    const gameContainer = document.getElementById('game');
+    const balanceDisplay = document.getElementById('balance');
+    const betInput = document.getElementById('betAmount');
+    const mineSelect = document.getElementById('mineCount');
+    let balance = parseInt(localStorage.getItem('balance')) || 900000000000;
+    let currentWinnings = 0;
+    let gameActive = false;
+
+    function startGame() {
+      if (gameActive) {
+        alert('You are already on a game.');
+        return;
+      }
+
+      const betAmount = parseInt(betInput.value);
+      const selectedMineCount = parseInt(mineSelect.value);
+
+      if (betAmount > balance) {
+        alert('You do not have enough coins.');
+        return;
+      }
+
+      if (betAmount < 5) {
+        alert('The minimum bet amount is 5 coins.');
+        return;
+      }
+
+      gameContainer.innerHTML = '';
+      currentWinnings = 0;
+      const mineMultipliers = generateMineMultipliers(selectedMineCount);
+      const mines = generateMines(selectedMineCount);
+
+      for (let i = 0; i < 25; i++) {
+        const cell = document.createElement('div');
+        cell.classList.add('cell');
+        cell.textContent = "❓";
+        cell.onclick = () => {
+          if (!gameActive) return;
+
+          if (mines.has(i)) {
+            revealMines();
+            cell.classList.add('mine');
+            balance -= betAmount;
+            balanceDisplay.textContent = balance;
+            endGame();
+          } else {
+            cell.classList.add('safe');
+            currentWinnings += betAmount * mineMultipliers[i];
+            cell.textContent = '💵';
+          }
+
+          updateTotalEarnings();
+        };
+        gameContainer.appendChild(cell);
+      }
+
+      document.getElementById('game-controls').style.display = 'block';
+      gameActive = true;
+    }
+
+    function cashOut() {
+      balance += currentWinnings;
+      balanceDisplay.textContent = balance;
+      revealMines();
+      alert(`You won ${currentWinnings} coins.`);
+      endGame();
+      updateTotalEarnings();
+    }
+
+    function revealMines() {
+      const cells = document.querySelectorAll('.cell');
+      const mines = new Set(JSON.parse(localStorage.getItem('mines')));
+      mines.forEach(mine => {
+        cells[mine].classList.add('mine');
+        cells[mine].textContent = '💣';
+      });
+    }
+
+    function endGame() {
+      document.getElementById('game-controls').style.display = 'none';
+      gameActive = false;
+
+      if (balance <= 0) {
+        balanceDisplay.textContent = '0';
+        alert('Game over! You have run out of coins.');
+      }
+    }
+
+    function updateTotalEarnings() {
+      const totalEarnings = parseInt(localStorage.getItem('totalEarnings')) || 0;
+      localStorage.setItem('totalEarnings', totalEarnings + currentWinnings);
+      document.getElementById('totalEarnings').textContent = localStorage.getItem('totalEarnings');
+    }
+
+    function generateMineMultipliers(mineCount) {
+      const multipliers = [];
+      for (let i = 0; i < 25; i++) {
+        if (i < mineCount) {
+          multipliers.push(Math.floor(Math.random() * 10) + 1); // Random multiplier between 1 and 10
+        } else {
+          multipliers.push(1); // Safe cells have a multiplier of 1
+        }
+      }
+      return multipliers;
+    }
+
+    function generateMines(mineCount) {
+      const mines = new Set();
+      while (mines.size < mineCount) {
+        const mine = Math.floor(Math.random() * 25);
+        mines.add(mine);
+      }
+      localStorage.setItem('mines', JSON.stringify(Array.from(mines)));
+      return mines;
+    }
+
+    // Initialize balance display
+    balanceDisplay.textContent = balance;
+  </script>
+</body>
+</html>
